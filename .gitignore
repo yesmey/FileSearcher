@@ -1,0 +1,25 @@
+# Object files
+*.o
+*.obj
+
+*.build
+*.cmd
+*.html
+*.lnkarg
+*.dep
+*.map
+*.json
+
+# Executables
+*.lib
+*.a
+*.exe
+*.exe_cv
+*.pdb
+
+# project files
+.dub
+*.suo
+*.sln
+*.visualdproj
+*.dproj
