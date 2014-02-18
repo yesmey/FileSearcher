@@ -12,22 +12,26 @@ private immutable char VolumeSeparatorChar = ':';
 private immutable string DirectorySeparatorStr = "\\";
 private immutable bool dirEqualsVolume = DirectorySeparatorChar == VolumeSeparatorChar;
 
+private immutable uint FindExInfoBasic = 0x01;
+private immutable uint FindExSearchNameMatch = 0x00;
+private immutable uint FIND_FIRST_EX_LARGE_FETCH = 2;
+
 public enum FileAttributes : uint
 {
-    Archive = 0x00020,
-	Compressed = 0x00800, 
-	Device = 0x00040,
-	Directory = 0x00010,
-	Encrypted = 0x04000,
-	Hidden = 0x00002,
-	Normal = 0x00080,
-	NotContentIndexed = 0x02000,
-	Offline = 0x01000,
-	ReadOnly = 0x00001,
-	ReparsePoint = 0x00400,
-	SparseFile = 0x00200,
-	System = 0x00004,
-	Temporary = 0x00100,
+    Archive             = 0x00020,
+    Compressed          = 0x00800, 
+    Device              = 0x00040,
+    Directory           = 0x00010,
+    Encrypted           = 0x04000,
+    Hidden              = 0x00002,
+    Normal              = 0x00080,
+    NotContentIndexed   = 0x02000,
+    Offline             = 0x01000,
+    ReadOnly            = 0x00001,
+    ReparsePoint        = 0x00400,
+    SparseFile          = 0x00200,
+    System              = 0x00004,
+    Temporary           = 0x00100,
 }
 
 abstract class CommonSearcher
@@ -45,7 +49,7 @@ abstract class CommonSearcher
     this(string path, string pattern, bool skipFirst = false)
     {
         _path = strip(path);
-        _findHandle = FindFirstFileA(cast(char*)Combine(path, pattern), &_winFindData);
+        _findHandle = FindFirstFileEx(cast(char*)Combine(path, pattern), FindExInfoBasic, &_winFindData, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
         _empty = (_findHandle == INVALID_HANDLE_VALUE);
         if (skipFirst && !_empty)
             popFront();
