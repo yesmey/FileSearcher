@@ -3,7 +3,6 @@ module FileSearcher;
 import core.sys.windows.windows;
 import std.array;
 import std.string;
-import typecons;
 
 private immutable char AltDirectorySeparatorChar = '/';
 private immutable char DirectorySeparatorChar = '\\';
@@ -13,13 +12,19 @@ private immutable string DirectorySeparatorStr = "\\";
 private immutable bool dirEqualsVolume = DirectorySeparatorChar == VolumeSeparatorChar;
 
 private immutable uint FindExInfoBasic = 0x01;
-private immutable uint FindExSearchNameMatch = 0x00;
 private immutable uint FIND_FIRST_EX_LARGE_FETCH = 2;
+
+private enum IndexSearchOps : uint
+{
+    FindExSearchNameMatch,
+    FindExSearchLimitToDirectories,
+    FindExSearchLimitToDevices
+};
 
 public enum FileAttributes : uint
 {
     Archive             = 0x00020,
-    Compressed          = 0x00800, 
+    Compressed          = 0x00800,
     Device              = 0x00040,
     Directory           = 0x00010,
     Encrypted           = 0x04000,
@@ -49,7 +54,6 @@ abstract class CommonSearcher
     this(string path, string pattern, bool skipFirst = false)
     {
         _path = strip(path);
-        _findHandle = FindFirstFileEx(cast(char*)Combine(path, pattern), FindExInfoBasic, &_winFindData, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
         _empty = (_findHandle == INVALID_HANDLE_VALUE);
         if (skipFirst && !_empty)
             popFront();
@@ -115,6 +119,7 @@ class DirectorySearcher : CommonSearcher
     this(string path, string pattern, bool skipFirst = false)
     {
         super(path, pattern, skipFirst);
+        _findHandle = FindFirstFileEx(cast(char*)Combine(path, pattern), FindExInfoBasic, &_winFindData, IndexSearchOps.FindExSearchLimitToDirectories, nullptr, FIND_FIRST_EX_LARGE_FETCH);
     }
 
     override void popFront() @property
@@ -144,6 +149,7 @@ class FileSearcher : CommonSearcher
     this(string path, string pattern, bool skipFirst = false)
     {
         super(path, pattern, skipFirst);
+        _findHandle = FindFirstFileEx(cast(char*)Combine(path, pattern), FindExInfoBasic, &_winFindData, IndexSearchOps.FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
     }
 
     override void popFront() @property
