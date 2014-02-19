@@ -1,6 +1,6 @@
 module FileSearcher;
 
-import core.sys.windows.windows;
+import std.c.windows.windows;
 import std.array;
 import std.string;
 
@@ -10,16 +10,28 @@ private immutable char PathSeparator = ';';
 private immutable char VolumeSeparatorChar = ':';
 private immutable string DirectorySeparatorStr = "\\";
 private immutable bool dirEqualsVolume = DirectorySeparatorChar == VolumeSeparatorChar;
-
-private immutable uint FindExInfoBasic = 0x01;
 private immutable uint FIND_FIRST_EX_LARGE_FETCH = 2;
 
-private enum IndexSearchOps : uint
+private enum FINDEX_INFO_LEVELS
+{
+    FindExInfoStandard,
+    FindExInfoMaxInfoLevel
+}
+
+private enum FINDEX_SEARCH_OPS
 {
     FindExSearchNameMatch,
     FindExSearchLimitToDirectories,
-    FindExSearchLimitToDevices
-};
+    FindExSearchLimitToDevices,
+    FindExSearchMaxSearchOp
+}
+
+nothrow:
+pragma(lib, "kernel32.lib");
+extern(Windows)
+{
+    HANDLE FindFirstFileExA(LPCSTR, FINDEX_INFO_LEVELS, PVOID, FINDEX_SEARCH_OPS, PVOID, DWORD);
+}
 
 public enum FileAttributes : uint
 {
@@ -39,6 +51,13 @@ public enum FileAttributes : uint
     Temporary           = 0x00100,
 }
 
+public enum SearchOptions : uint
+{
+    None                = 0x00,
+    SkipFirst           = 0x01,
+    LargeFetch          = 0x02,
+}
+
 abstract class CommonSearcher
 {
     private WIN32_FIND_DATA _winFindData;
@@ -48,15 +67,12 @@ abstract class CommonSearcher
 
     this(string path)
     {
-        this(path, "*");
+        this(path, "*", SearchOptions.None);
     }
 
-    this(string path, string pattern, bool skipFirst = false)
+    this(string path, string pattern, SearchOptions options)
     {
         _path = strip(path);
-        _empty = (_findHandle == INVALID_HANDLE_VALUE);
-        if (skipFirst && !_empty)
-            popFront();
     }
 
     ~this()
@@ -113,13 +129,20 @@ class DirectorySearcher : CommonSearcher
 {
     this(string path)
     {
-        super(path, "*");
+        super(path, "*", SearchOptions.None);
     }
 
-    this(string path, string pattern, bool skipFirst = false)
+    this(string path, string pattern, SearchOptions options)
     {
-        super(path, pattern, skipFirst);
-        _findHandle = FindFirstFileEx(cast(char*)Combine(path, pattern), FindExInfoBasic, &_winFindData, IndexSearchOps.FindExSearchLimitToDirectories, nullptr, FIND_FIRST_EX_LARGE_FETCH);
+        super(path, pattern, options);
+        if (options & SearchOptions.LargeFetch)
+            _findHandle = FindFirstFileExA(cast(char*)Combine(path, pattern), FINDEX_INFO_LEVELS.FindExInfoStandard, &_winFindData, FINDEX_SEARCH_OPS.FindExSearchLimitToDirectories, null, FIND_FIRST_EX_LARGE_FETCH);
+        else
+            _findHandle = FindFirstFileExA(cast(char*)Combine(path, pattern), FINDEX_INFO_LEVELS.FindExInfoStandard, &_winFindData, FINDEX_SEARCH_OPS.FindExSearchLimitToDirectories, null, 0);
+
+        _empty = (_findHandle == INVALID_HANDLE_VALUE);
+        if ((options & SearchOptions.SkipFirst) && !_empty)
+            popFront();
     }
 
     override void popFront() @property
@@ -143,13 +166,20 @@ class FileSearcher : CommonSearcher
 {
     this(string path)
     {
-        super(path, "*");
+        super(path, "*", SearchOptions.None);
     }
 
-    this(string path, string pattern, bool skipFirst = false)
+    this(string path, string pattern, SearchOptions options)
     {
-        super(path, pattern, skipFirst);
-        _findHandle = FindFirstFileEx(cast(char*)Combine(path, pattern), FindExInfoBasic, &_winFindData, IndexSearchOps.FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
+        super(path, pattern, options);
+        if (options & SearchOptions.LargeFetch)
+            _findHandle = FindFirstFileExA(cast(char*)Combine(path, pattern), FINDEX_INFO_LEVELS.FindExInfoStandard, &_winFindData, FINDEX_SEARCH_OPS.FindExSearchNameMatch, null, FIND_FIRST_EX_LARGE_FETCH);
+        else
+            _findHandle = FindFirstFileExA(cast(char*)Combine(path, pattern), FINDEX_INFO_LEVELS.FindExInfoStandard, &_winFindData, FINDEX_SEARCH_OPS.FindExSearchNameMatch, null, 0);
+
+        _empty = (_findHandle == INVALID_HANDLE_VALUE);
+        if ((options & SearchOptions.SkipFirst) && !_empty)
+            popFront();
     }
 
     override void popFront() @property
