@@ -150,7 +150,7 @@ class DirectorySearcher : CommonSearcher
         // since front will always run once before popFront, we can always move to the next file
         while (FindNextFileA(_findHandle, &_winFindData))
         {
-            if (_winFindData.cFileName[0] == '.')
+            if (std.string.wcscmp(_winFindData.cFileName, ".") != 0 || std.string.wcscmp(_winFindData.cFileName, "..") != 0)
                 continue;
 
             if ((_winFindData.dwFileAttributes & FileAttributes.Directory) == FileAttributes.Directory)
@@ -187,7 +187,7 @@ class FileSearcher : CommonSearcher
         // since front will always run once before popFront, we can always move to the next file
         while (FindNextFileA(_findHandle, &_winFindData))
         {
-            if (_winFindData.cFileName[0] == '.')
+            if (std.string.wcscmp(_winFindData.cFileName, ".") != 0 || std.string.wcscmp(_winFindData.cFileName, "..") != 0)
                 continue;
 
             if ((_winFindData.dwFileAttributes & FileAttributes.Directory) != FileAttributes.Directory)
